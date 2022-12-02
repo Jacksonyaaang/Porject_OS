@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#define NBR_PROCESSUS 2
+#define NBR_PROCESSUS 8
 #define TAILLE_PILE 512
 #define MAX_NAME 10
 
@@ -25,7 +25,7 @@ extern void ctx_sw(uint32_t tab_sauve[5], uint32_t tab_restau[5]);
 
 //les fonctions principales
 void struct_init();
-void create_process(void (*fct)(void), char *name);
+int32_t cree_processus(void (*code)(void), char *nom);
 
 void ordonnance(void);
 
@@ -41,5 +41,11 @@ extern Processus *tableau_processus[NBR_PROCESSUS];
 //fonction de test:
 void idle(void);
 void proc1(void);
+void proc2(void);
+void proc3(void);
+void proc4(void);
+void proc5(void);
+void proc6(void);
+void proc7(void);
 
 #endif

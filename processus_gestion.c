@@ -13,16 +13,22 @@ void ctx_sw(uint32_t tab_sauve[5], uint32_t tab_restau[5]);
 Processus *tableau_processus[NBR_PROCESSUS];
 //les variables globales
 Processus *actif = NULL; //the current actif process
+int NumberProcess = 0;
 
 
-void create_process(void (*fct)(void), char *name){
-    Processus *process_next= malloc(sizeof(*process_next));
-    process_next->pid =1;
-    process_next->etat_proc = activable;
-    sprintf(process_next->nom_processus, "%s", name);
-    process_next->tab_registre[1] = (uint32_t)&(process_next->pile_execution[TAILLE_PILE-1]);
-    process_next->pile_execution[TAILLE_PILE-1] = (uint32_t)fct;
-    tableau_processus[1] = process_next;
+int32_t cree_processus(void (*code)(void), char *nom){
+    
+    if (NumberProcess+1>NBR_PROCESSUS) return -1;
+
+    Processus *new_process = malloc(sizeof(*new_process));
+    new_process->pid = NumberProcess;
+    sprintf(new_process->nom_processus, "%s", nom);
+    new_process->etat_proc = activable;
+    new_process->tab_registre[1] = (uint32_t) &(new_process->pile_execution[TAILLE_PILE-1]); //%esp save the adrr of top of stack
+    new_process->pile_execution[TAILLE_PILE-1] = (uint32_t)code;
+    tableau_processus[NumberProcess] = new_process;
+    NumberProcess++;
+    return new_process->pid;
 }
 
 
@@ -32,10 +38,17 @@ void struct_init(){
     strcpy(process_depart->nom_processus, "idle");
     process_depart->etat_proc =  elu;
     tableau_processus[0] = process_depart;
-
+    NumberProcess++;
     actif = process_depart; //initialization the current process
 
-    create_process(proc1, "proc1");
+    cree_processus(proc1, "proc1");
+    cree_processus(proc2, "proc2");
+    cree_processus(proc3, "proc3");
+    cree_processus(proc4, "proc4");
+    cree_processus(proc5, "proc5");
+    cree_processus(proc6, "proc6");
+    cree_processus(proc7, "proc7");
+
 }
 
 
@@ -49,12 +62,15 @@ char *mon_nom(void){
 
 void ordonnance(void){
     Processus *next_pro = NULL;
-    for (int i=0;i<NBR_PROCESSUS;++i){
-        if (tableau_processus[i]->etat_proc == activable){
-            next_pro = tableau_processus[i];
-            break;
-        }
-    }   
+    int index_next;
+    if (actif->pid != 7){
+        index_next = (actif->pid)+1;
+    }else 
+    {
+        index_next = 0;
+    }
+    next_pro = tableau_processus[index_next];
+
     next_pro->etat_proc = elu;
     actif->etat_proc = activable;
     Processus *save_current = actif;
@@ -123,5 +139,41 @@ void proc1(void) {
     }
 }
 
+void proc2(void) {
+    for (;;) {
+    printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+    ordonnance();
+    }
+}
+void proc3(void) {
+    for (;;) {
+    printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+    ordonnance();
+    }
+}
+void proc4(void) {
+    for (;;) {
+    printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+    ordonnance();
+    }
+}
+void proc5(void) {
+    for (;;) {
+    printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+    ordonnance();
+    }
+}
+void proc6(void) {
+    for (;;) {
+    printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+    ordonnance();
+    }
+}
+void proc7(void) {
+    for (;;) {
+    printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+    ordonnance();
+    }
+}
 
 
