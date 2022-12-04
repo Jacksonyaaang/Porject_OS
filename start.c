@@ -13,11 +13,11 @@
 void kernel_start(void)
 {
     efface_ecran();
+    place_curseur(0,0);
+    change_frequency();
 
     struct_init();
-    //printf("%i\n", mon_pid());
     idle();
-
 
 
     while (1) {

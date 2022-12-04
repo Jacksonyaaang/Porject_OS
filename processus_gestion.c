@@ -6,13 +6,21 @@
 #include "screen.h"
 #include "string.h"
 
+//les variables extern
+extern int horloge;
+extern int temps_ecoule;
 
 //switch the context
 void ctx_sw(uint32_t tab_sauve[5], uint32_t tab_restau[5]);
 
-Processus *tableau_processus[NBR_PROCESSUS];
 //les variables globales
+Processus *tableau_processus[NBR_PROCESSUS];
+
 Processus *actif = NULL; //the current actif process
+Processus *tete_process = NULL;   //the head of the activable liste  
+Processus *queue_process = NULL;
+Processus *tete_endormi = NULL;
+
 int NumberProcess = 0;
 
 
@@ -27,6 +35,9 @@ int32_t cree_processus(void (*code)(void), char *nom){
     new_process->tab_registre[1] = (uint32_t) &(new_process->pile_execution[TAILLE_PILE-1]); //%esp save the adrr of top of stack
     new_process->pile_execution[TAILLE_PILE-1] = (uint32_t)code;
     tableau_processus[NumberProcess] = new_process;
+
+    insert_queue(new_process);
+
     NumberProcess++;
     return new_process->pid;
 }
@@ -41,16 +52,86 @@ void struct_init(){
     NumberProcess++;
     actif = process_depart; //initialization the current process
 
+    tete_process = process_depart;
+    queue_process = process_depart;
+    queue_process->suiv = NULL;
+
     cree_processus(proc1, "proc1");
     cree_processus(proc2, "proc2");
     cree_processus(proc3, "proc3");
-    cree_processus(proc4, "proc4");
+/*     cree_processus(proc4, "proc4");
     cree_processus(proc5, "proc5");
     cree_processus(proc6, "proc6");
-    cree_processus(proc7, "proc7");
+     */
 
 }
 
+Processus *extraction_tete_activable(){
+    Processus *pro_extract = tete_process;
+    if (tete_process->suiv == NULL){
+        tete_process = NULL;
+        queue_process = NULL;
+        return pro_extract;
+    }
+    
+    pro_extract->etat_proc = elu;
+    tete_process = tete_process->suiv;
+    pro_extract->suiv =  NULL;
+    return pro_extract;
+}
+Processus *extraction_tete_endormi(){
+    Processus *a_retirer = tete_endormi;
+
+    if (tete_endormi->suiv == NULL) {
+        tete_endormi = NULL;
+        return a_retirer;
+    }
+
+    tete_endormi = a_retirer->suiv;
+    a_retirer->suiv = NULL;
+    a_retirer->etat_proc = activable;
+    return a_retirer;
+
+}
+
+
+void insert_queue(Processus *pro_insert){
+    pro_insert->etat_proc = activable;
+    pro_insert->suiv = NULL;
+    if (tete_process == NULL)
+    {
+        tete_process = pro_insert;
+        queue_process = pro_insert;
+        return ;
+    }
+    queue_process->suiv = pro_insert;
+    queue_process=  pro_insert;
+}
+
+void insert_endormi(Processus *pro_insert){
+    pro_insert->etat_proc = endormi;
+    if (tete_endormi == NULL){
+        tete_endormi=  pro_insert;
+    }else if (tete_endormi->temps_reveil > pro_insert->temps_reveil){  //quand le premier est < que pro_insert
+        pro_insert->suiv = tete_endormi;
+        tete_endormi = pro_insert;
+    }else{
+        Processus *current_pro = tete_endormi;
+        while (current_pro->suiv != NULL && current_pro->suiv->temps_reveil < pro_insert->temps_reveil){
+            current_pro = current_pro->suiv;
+        }
+        pro_insert->suiv = current_pro->suiv;
+        current_pro->suiv =  pro_insert;
+    }
+    
+}
+
+void dors(uint32_t nbr_secs){
+    if (nbr_secs == 0) return;
+
+    actif->temps_reveil = horloge+nbr_secs;
+    ordonnance();
+}
 
 
 int32_t mon_pid(void){
@@ -60,22 +141,41 @@ char *mon_nom(void){
     return actif->nom_processus;
 }
 
+int nbr_secondes(){
+    return actif->temps_reveil;
+}
+
+
 void ordonnance(void){
-    Processus *next_pro = NULL;
+    /*
     int index_next;
-    if (actif->pid != 7){
+    if (actif->pid != 7){  // pour l'ordonnanceur static 
         index_next = (actif->pid)+1;
     }else 
     {
         index_next = 0;
     }
     next_pro = tableau_processus[index_next];
+    */
+    Processus *save_actif = actif;
 
-    next_pro->etat_proc = elu;
-    actif->etat_proc = activable;
-    Processus *save_current = actif;
+    while (tete_endormi != NULL && tete_endormi->temps_reveil < horloge){
+        //inserer la queue de la liste activable 
+        insert_queue(extraction_tete_endormi());
+    }
+    Processus *next_pro = extraction_tete_activable();
+
+    if (actif->temps_reveil > horloge){
+        insert_endormi(actif);
+    }else{
+        insert_queue(actif);
+    }
+
+
+
     actif = next_pro;
-    ctx_sw(save_current->tab_registre, next_pro->tab_registre);
+
+    ctx_sw(save_actif->tab_registre, next_pro->tab_registre);
 }
 
 
@@ -124,7 +224,7 @@ void proc1(void){
 */
 
 
-
+/*
 void idle(void)
 {
     for (;;) {
@@ -173,6 +273,112 @@ void proc7(void) {
     for (;;) {
     printf("[%s] pid = %i\n", mon_nom(), mon_pid());
     ordonnance();
+    }
+}
+*/
+
+/*les tests pour basculer les process par l'horloge de système*/
+
+/* void idle(void)
+{
+    for (;;) {
+        printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+        sti();
+        hlt();
+        cli();
+    }
+}
+void proc1(void) {
+    for (;;) {
+        printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+        sti();
+        hlt();
+        cli();
+    }
+}
+void proc2(void) {
+    for (;;) {
+        printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+        sti();
+        hlt();
+        cli();
+    }
+}
+void proc3(void) {
+    for (;;) {
+        printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+        sti();
+        hlt();
+        cli();
+    }
+}
+void proc4(void) {
+    for (;;) {
+        printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+        sti();
+        hlt();
+        cli();
+    }
+}
+void proc5(void) {
+    for (;;) {
+        printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+        sti();
+        hlt();
+        cli();
+    }
+}
+void proc6(void) {
+    for (;;) {
+        printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+        sti();
+        hlt();
+        cli();
+    }
+void proc7(void) {
+    for (;;) {
+        printf("[%s] pid = %i\n", mon_nom(), mon_pid());
+        sti();
+        hlt();
+        cli();
+    }
+} 
+}*/
+
+
+void idle()
+{
+    for (;;) {
+        sti();
+        hlt();
+        cli();
+    }
+/*     p tete_process->suiv->suiv->suiv->pid
+    p tete_endormi->suiv->suiv->pid */
+}
+void proc1(void)
+{
+    for (;;) {
+        printf("temps_ecoule : %d\n", temps_ecoule);
+        printf("[temps = %u] processus %s pid = %i\n", nbr_secondes(),
+        mon_nom(), mon_pid());
+        dors(2);
+    }
+}
+void proc2(void)
+{
+    for (;;) {
+        printf("[temps = %u] processus %s pid = %i\n", nbr_secondes(),
+        mon_nom(), mon_pid());
+        dors(3);
+    }
+}
+void proc3(void)
+{
+    for (;;) {
+        printf("[temps = %u] processus %s pid = %i\n", nbr_secondes(),
+        mon_nom(), mon_pid());
+        dors(5);
     }
 }
 
