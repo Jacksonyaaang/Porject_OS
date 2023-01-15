@@ -9,15 +9,17 @@
 #define TAILLE_TIME 8
 
 int temps_ecoule = 0;
-int CLOCKFREQ = 50;
-int QUARTZ = 0x1234DD;
+int horloge = 0;
+
 
 
 void display_hours(char *s){
+
+    int length_s = strlen(s);
     uint32_t ligne_hours = 0;
-    uint32_t colonne_hours = 72;
+    uint32_t colonne_hours = 80-length_s;
     
-    for (int i=0;i<TAILLE_TIME;++i){
+    for (int i=0;i<length_s;++i){
         ecrit_car(ligne_hours, colonne_hours+i, 0, 1, 15, *(s+i));
     }
 }
@@ -27,6 +29,7 @@ void tic_PIT(void){
     temps_ecoule++;
 
     if (temps_ecoule%50 == 0){
+        horloge++;
         int tt_seconde =temps_ecoule/50;
         int seconde = (tt_seconde)%60;
         int minute = (tt_seconde/60)%60;
@@ -34,15 +37,15 @@ void tic_PIT(void){
         char buffer[TAILLE_TIME];
         sprintf(buffer, "%d:%d:%d", hours, minute, seconde);
         display_hours(buffer);  //le traiter --> vraiment 
-
     }
+    ordonnance();
 
 }
 
 void init_traitant_IT(uint32_t num_IT, void (*traitant)(void)){
     uint32_t *addr_depart = (uint32_t *)(0x1000 + num_IT*8); //pcq chaque case contient 8 octetsQUARTZ
     uint32_t  faible_traitant = (uint32_t )traitant & 0x0000ffff;
-    uint32_t fort_traitant = (uint32_t)traitant &0xffff0000;
+    uint32_t fort_traitant = (uint32_t)traitant &0xffff0000;    
     uint32_t premier_mot = KERNEL_CS<<16 | faible_traitant;
     uint32_t seconde_mot = fort_traitant |0x8E00;
     *addr_depart = premier_mot;
@@ -52,25 +55,27 @@ void init_traitant_IT(uint32_t num_IT, void (*traitant)(void)){
 
 
 
-void change_frequency(int freq_change){
-    CLOCKFREQ = freq_change;
+void change_frequency(){
     outb(0x34, 0x43);
-    outb((QUARTZ/CLOCKFREQ) & 0xff, 0x40); //les bits faibles
-    outb(((QUARTZ/CLOCKFREQ)&0xff00)>>8, 0x40);
-
+    int CLOCKFREQ = 50;
+    int QUARTZ = 0x1234DD;  
+    int message_send = (QUARTZ/CLOCKFREQ);
+    outb(message_send%256, 0x40); //les bits faibles
+    outb(message_send>>8, 0x40);
+    masque_IRQ(0,0);
+    init_traitant_IT(32,traitant_IT_32);
 }
 
 
 void masque_IRQ(uint32_t num_IRQ, bool masque){
     uint8_t tab_masquage = inb(0x21);
-    if (masque ==1){
-        tab_masquage |=0b10000000;
-    }else{
-        tab_masquage &=0b01111111;
+    uint8_t etat_bit = (tab_masquage>>num_IRQ) & 0b1;
+    if (masque ==1 && etat_bit ==0){
+        tab_masquage += 1<<num_IRQ;
+    }else if (masque == 0 && etat_bit ==1){
+        tab_masquage -= 1<<num_IRQ;
     }
 
     outb(tab_masquage, 0x21);
 }
-
-
 

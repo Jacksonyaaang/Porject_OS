@@ -12,6 +12,8 @@ extern int temps_ecoule;
 
 //switch the context
 void ctx_sw(uint32_t tab_sauve[5], uint32_t tab_restau[5]);
+char *Name_Etat[] = {"elu", "activable", "endormi", "mourant"};
+
 
 //les variables globales
 Processus *tableau_processus[NBR_PROCESSUS];
@@ -132,6 +134,53 @@ void dors(uint32_t nbr_secs){
     actif->temps_reveil = horloge+nbr_secs;
     ordonnance();
 }
+
+void affiche_etats(void){
+    //strcpy(buffer, Name_Etat[actif->etat_proc]);
+    char *buffer0 = malloc(sizeof(*buffer0));
+    sprintf(buffer0, "process [%s]'s status :[%s]",tableau_processus[0]->nom_processus, Name_Etat[actif->etat_proc]);
+    char *buffer1 = malloc(sizeof(*buffer1));
+    sprintf(buffer1, "process [%s]'s status :[%s]",tableau_processus[1]->nom_processus, Name_Etat[actif->etat_proc]);
+        char *buffer2 = malloc(sizeof(*buffer2));
+    sprintf(buffer2, "process [%s]'s status :[%s]",tableau_processus[2]->nom_processus, Name_Etat[actif->etat_proc]);
+        char *buffer3 = malloc(sizeof(*buffer3));
+    sprintf(buffer3, "process [%s]'s status :[%s]",tableau_processus[3]->nom_processus, Name_Etat[actif->etat_proc]);
+
+    int length_etat0 = strlen(buffer0);
+    int length_etat1 = strlen(buffer1);
+    int length_etat2 = strlen(buffer2);
+    int length_etat3 = strlen(buffer3);
+    int place_ligne0 = 5;
+    int place_ligne1 = 6;
+    int place_ligne2 = 7;
+    int place_ligne3 = 8;
+    int place_col0 = 80-length_etat0;
+    int place_col1 = 80-length_etat1;
+    int place_col2 = 80-length_etat2;
+    int place_col3 = 80-length_etat3;
+    for (int i=0;i<length_etat0; ++i){
+        ecrit_car(place_ligne0, place_col0+i, 0,3,14,*(buffer0+i));
+    }
+        for (int i=0;i<length_etat1; ++i){
+        ecrit_car(place_ligne1, place_col1+i, 0,3,14,*(buffer1+i));
+    }
+        for (int i=0;i<length_etat2; ++i){
+        ecrit_car(place_ligne2, place_col2+i, 0,3,14,*(buffer2+i));
+    }
+        for (int i=0;i<length_etat3; ++i){
+        ecrit_car(place_ligne3, place_col3+i, 0,3,14,*(buffer3+i));
+    }
+
+
+
+
+    free(buffer0);
+    free(buffer1);
+    free(buffer2);
+    free(buffer3);
+
+}
+
 
 
 int32_t mon_pid(void){

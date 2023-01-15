@@ -7,7 +7,7 @@
 #define TAILLE_PILE 512
 #define MAX_NAME 10
 
-typedef enum Etat{elu, activable, endormi}Etat;
+typedef enum Etat{elu, activable, endormi, mourant}Etat;
 
 
 typedef struct Processus{
@@ -34,12 +34,15 @@ int32_t cree_processus(void (*code)(void), char *nom);
 
 void ordonnance(void);
 void dors(uint32_t nbr_secs);
+void fin_processus(void);
 
 Processus *extraction_tete_activable();
 Processus *extraction_tete_endormi();
 
 void insert_queue(Processus *pro_insert);
 void insert_endormi(Processus *pro_insert);
+
+void affiche_etats(void);
 
 int32_t mon_pid(void);
 char *mon_nom(void);
